@@ -1,0 +1,47 @@
+name: Construir Escola Biblica APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Obter ficheiros
+        uses: actions/checkout@v4
+
+      - name: Preparar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Instalar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Extrair projeto
+        run: |
+          mkdir projeto
+          unzip -q EscolaBiblicaAndroid_projeto_v2.zip -d projeto
+          SETTINGS=$(find projeto -name settings.gradle.kts -print -quit)
+          if [ -z "$SETTINGS" ]; then
+            echo "Projeto Android não encontrado"
+            exit 1
+          fi
+          echo "PROJECT_DIR=$(dirname "$SETTINGS")" >> "$GITHUB_ENV"
+
+      - name: Construir APK
+        run: gradle -p "$PROJECT_DIR" assembleDebug
+
+      - name: Guardar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: EscolaBiblica-APK
+          path: projeto/**/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
